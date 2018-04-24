@@ -16,6 +16,8 @@ const (
 	contextPkgPath = "context"
 	clientPkgPath  = "github.com/micro/go-micro/client"
 	serverPkgPath  = "github.com/micro/go-micro/server"
+	serviceSuffix  = "Service"
+	clientSuffix   = "Client"
 )
 
 func init() {
@@ -99,25 +101,38 @@ var reservedClientName = map[string]bool{
 	// TODO: do we need any in go-micro?
 }
 
+func generateServiceName(file *generator.FileDescriptor, service *pb.ServiceDescriptorProto) (orgSvcName, serviceName, servName string) {
+	orgSvcName = service.GetName()
+
+	serviceName = strings.ToLower(service.GetName())
+	if pkg := file.GetPackage(); pkg != "" {
+		serviceName = pkg
+	}
+
+	servName = generator.CamelCase(orgSvcName)
+	if !strings.HasSuffix(servName, serviceSuffix) {
+		servName = servName + serviceSuffix
+	}
+
+	return
+}
+
 func unexport(s string) string { return strings.ToLower(s[:1]) + s[1:] }
 
 // generateService generates all the code for the named service.
 func (g *micro) generateService(file *generator.FileDescriptor, service *pb.ServiceDescriptorProto, index int) {
 	path := fmt.Sprintf("6,%d", index) // 6 means service.
 
-	origServName := service.GetName()
-	serviceName := strings.ToLower(service.GetName())
-	if pkg := file.GetPackage(); pkg != "" {
-		serviceName = pkg
-	}
-	servName := generator.CamelCase(origServName)
+	orgSvcName, serviceName, servName := generateServiceName(file, service)
+	svcNameClInterface := servName + clientSuffix
+	svcNameClStruct := unexport(servName)
 
 	g.P()
-	g.P("// Client API for ", servName, " service")
+	g.P("// Client API for ", orgSvcName, " service")
 	g.P()
 
 	// Client interface.
-	g.P("type ", servName, "Service interface {")
+	g.P("type ", svcNameClInterface, " interface {")
 	for i, method := range service.Method {
 		g.gen.PrintComments(fmt.Sprintf("%s,2,%d", path, i)) // 2 means method in a service.
 		g.P(g.generateClientSignature(servName, method))
@@ -126,21 +141,21 @@ func (g *micro) generateService(file *generator.FileDescriptor, service *pb.Serv
 	g.P()
 
 	// Client structure.
-	g.P("type ", unexport(servName), "Service struct {")
+	g.P("type ", svcNameClStruct, " struct {")
 	g.P("c ", clientPkg, ".Client")
 	g.P("serviceName string")
 	g.P("}")
 	g.P()
 
 	// NewClient factory.
-	g.P("func ", servName, "ServiceClient (serviceName string, c ", clientPkg, ".Client) ", servName, "Service {")
+	g.P("func New", svcNameClInterface, "(serviceName string, c ", clientPkg, ".Client) ", svcNameClInterface, " {")
 	g.P("if c == nil {")
 	g.P("c = ", clientPkg, ".NewClient()")
 	g.P("}")
 	g.P("if len(serviceName) == 0 {")
 	g.P(`serviceName = "`, serviceName, `"`)
 	g.P("}")
-	g.P("return &", unexport(servName), "Service{")
+	g.P("return &", svcNameClStruct, "{")
 	g.P("c: c,")
 	g.P("serviceName: serviceName,")
 	g.P("}")
@@ -219,8 +234,9 @@ func (g *micro) generateClientMethod(reqServ, servName, serviceDescVar string, m
 	methName := generator.CamelCase(method.GetName())
 	inType := g.typeName(method.GetInputType())
 	outType := g.typeName(method.GetOutputType())
+	svcNameClInstance := unexport(servName)
 
-	g.P("func (c *", unexport(servName), "Service) ", g.generateClientSignature(servName, method), "{")
+	g.P("func (c *", svcNameClInstance, ") ", g.generateClientSignature(servName, method), "{")
 	if !method.GetServerStreaming() && !method.GetClientStreaming() {
 		g.P(`req := c.c.NewRequest(c.serviceName, "`, reqMethod, `", in)`)
 		g.P("out := new(", outType, ")")
@@ -232,7 +248,7 @@ func (g *micro) generateClientMethod(reqServ, servName, serviceDescVar string, m
 		g.P()
 		return
 	}
-	streamType := unexport(servName) + methName + "Service"
+	streamType := svcNameClInstance + methName + "Service"
 	g.P(`req := c.c.NewRequest(c.serviceName, "`, reqMethod, `", &`, inType, `{})`)
 	g.P("stream, err := c.c.Stream(ctx, req, opts...)")
 	g.P("if err != nil { return nil, err }")
