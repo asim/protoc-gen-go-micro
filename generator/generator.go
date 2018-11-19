@@ -47,6 +47,7 @@ import (
 	"log"
 	"os"
 	"path"
+	"regexp"
 	"strconv"
 	"strings"
 	"unicode"
@@ -1337,6 +1338,15 @@ func (g *Generator) generateImports() {
 		filename := fd.goFileName()
 		// By default, import path is the dirname of the Go filename.
 		importPath := path.Dir(filename)
+
+		// If a project uses Go Modules, then importPath may contain paths
+		// with the version of the package, for example: github.com/micro/go-api@v0.4.0/proto
+		// Therefore we need to remove this information from importPath
+		if strings.Contains(importPath, "@") {
+			reg := regexp.MustCompile("@v\\d+\\.\\d+\\.\\d+\\/")
+			importPath = reg.ReplaceAllString(importPath, "/")
+		}
+
 		if substitution, ok := g.ImportMap[s]; ok {
 			importPath = substitution
 		}
