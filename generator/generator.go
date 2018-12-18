@@ -1331,7 +1331,7 @@ func (g *Generator) generateImports() {
 	for i, s := range g.file.Dependency {
 		fd := g.fileByName(s)
 		// Do not import our own package.
-		if fd.PackageName() == g.packageName {
+		if g.file.PackageName() == g.packageName {
 			continue
 		}
 		filename := fd.goFileName()
