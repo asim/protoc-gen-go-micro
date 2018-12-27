@@ -41,6 +41,10 @@ var _ server.Option
 
 // Client API for Greeter service
 
+const (
+	ServiceGreeterMethodHello = "Greeter.Hello"
+)
+
 type GreeterService interface {
 	Hello(ctx context.Context, in *Request, opts ...client.CallOption) (*Response, error)
 }
@@ -64,7 +68,7 @@ func NewGreeterService(name string, c client.Client) GreeterService {
 }
 
 func (c *greeterService) Hello(ctx context.Context, in *Request, opts ...client.CallOption) (*Response, error) {
-	req := c.c.NewRequest(c.name, "Greeter.Hello", in)
+	req := c.c.NewRequest(c.name, ServiceGreeterMethodHello, in)
 	out := new(Response)
 	err := c.c.Call(ctx, req, out, opts...)
 	if err != nil {
