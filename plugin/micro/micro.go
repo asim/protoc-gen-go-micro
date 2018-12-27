@@ -127,6 +127,13 @@ func (g *micro) generateService(file *generator.FileDescriptor, service *pb.Serv
 	g.P("// Client API for ", servName, " service")
 	g.P()
 
+	// Service method constants
+	g.P("const (")
+	for _, method := range service.Method {
+		g.P(fmt.Sprintf("Service%sMethod%s", servName, method.GetName()), ` = "`, fmt.Sprintf("%s.%s", servName, method.GetName()), `"`)
+	}
+	g.P(")")
+
 	// Client interface.
 	g.P("type ", servAlias, " interface {")
 	for i, method := range service.Method {
@@ -244,7 +251,7 @@ func (g *micro) generateClientSignature(servName string, method *pb.MethodDescri
 }
 
 func (g *micro) generateClientMethod(reqServ, servName, serviceDescVar string, method *pb.MethodDescriptorProto, descExpr string) {
-	reqMethod := fmt.Sprintf("%s.%s", servName, method.GetName())
+	reqMethod := fmt.Sprintf("Service%sMethod%s", servName, method.GetName())
 	methName := generator.CamelCase(method.GetName())
 	inType := g.typeName(method.GetInputType())
 	outType := g.typeName(method.GetOutputType())
@@ -258,7 +265,7 @@ func (g *micro) generateClientMethod(reqServ, servName, serviceDescVar string, m
 
 	g.P("func (c *", unexport(servAlias), ") ", g.generateClientSignature(servName, method), "{")
 	if !method.GetServerStreaming() && !method.GetClientStreaming() {
-		g.P(`req := c.c.NewRequest(c.name, "`, reqMethod, `", in)`)
+		g.P(`req := c.c.NewRequest(c.name, `, reqMethod, `, in)`)
 		g.P("out := new(", outType, ")")
 		// TODO: Pass descExpr to Invoke.
 		g.P("err := ", `c.c.Call(ctx, req, out, opts...)`)
@@ -269,7 +276,7 @@ func (g *micro) generateClientMethod(reqServ, servName, serviceDescVar string, m
 		return
 	}
 	streamType := unexport(servAlias) + methName
-	g.P(`req := c.c.NewRequest(c.name, "`, reqMethod, `", &`, inType, `{})`)
+	g.P(`req := c.c.NewRequest(c.name, `, reqMethod, `, &`, inType, `{})`)
 	g.P("stream, err := c.c.Stream(ctx, req, opts...)")
 	g.P("if err != nil { return nil, err }")
 
