@@ -189,7 +189,7 @@ func (g *micro) generateService(file *generator.FileDescriptor, service *pb.Serv
 
 	// Server registration.
 	g.P("func Register", servName, "Handler(s ", serverPkg, ".Server, hdlr ", serverType, ", opts ...", serverPkg, ".HandlerOption) error {")
-	g.P("type ", unexport(servName), "Handler interface {")
+	g.P("type handler interface {")
 
 	// generate interface methods
 	for _, method := range service.Method {
@@ -205,7 +205,7 @@ func (g *micro) generateService(file *generator.FileDescriptor, service *pb.Serv
 	}
 	g.P("}")
 	g.P("type ", servName, " struct {")
-	g.P(unexport(servName), "Handler")
+	g.P("handler")
 	g.P("}")
 	g.P("h := &", unexport(servName), "Handler{hdlr}")
 	g.P("return s.Handle(s.NewHandler(&", servName, "{h}, opts...))")
