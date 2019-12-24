@@ -139,6 +139,11 @@ func (g *micro) generateService(file *generator.FileDescriptor, service *pb.Serv
 	g.P("// Client API for ", servName, " service")
 	g.P()
 
+	g.P("var (")
+	g.P(`ServiceName = "`, serviceName, `"`)
+	g.P(")")
+	g.P()
+
 	// Client interface.
 	g.P("type ", servAlias, " interface {")
 	for i, method := range service.Method {
@@ -169,6 +174,12 @@ func (g *micro) generateService(file *generator.FileDescriptor, service *pb.Serv
 	g.P("}")
 	g.P("}")
 	g.P()
+
+	g.P("func Micro", servAlias, "Client (c ", clientPkg, ".Client) ", servAlias, " {")
+	g.P("return New", servAlias, `(ServiceName, c)`)
+	g.P("}")
+	g.P()
+
 	var methodIndex, streamIndex int
 	serviceDescVar := "_" + servName + "_serviceDesc"
 	// Client method implementations.
