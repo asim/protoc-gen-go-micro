@@ -42,6 +42,7 @@ func NewGreeterEndpoints() []*api.Endpoint {
 			Name:    "Greeter.Hello",
 			Path:    []string{"/hello"},
 			Method:  []string{"POST"},
+			Body:    "*",
 			Handler: "rpc",
 		},
 		&api.Endpoint{
@@ -154,6 +155,7 @@ func RegisterGreeterHandler(s server.Server, hdlr GreeterHandler, opts ...server
 		Name:    "Greeter.Hello",
 		Path:    []string{"/hello"},
 		Method:  []string{"POST"},
+		Body:    "*",
 		Handler: "rpc",
 	}))
 	opts = append(opts, api.WithEndpoint(&api.Endpoint{
